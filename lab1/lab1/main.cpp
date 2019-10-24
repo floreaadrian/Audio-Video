@@ -83,14 +83,14 @@ void decode(vector<block_of_8> &y_8_block_matrix,
             int R = (int)(y + 1.140 * (cr - 128));
             int G = (int)(y - 0.344 * (cb - 128) - 0.711*(cr - 128));
             int B = (int)(y + 1.772 * (cb - 128));
-            if(R<0) fout<<"0\n";
-            else if(R>max_pixel_value) fout<<max_pixel_value<<"\n";
+            if(R < 0) fout<<"0\n";
+            else if(R > max_pixel_value) fout<<max_pixel_value<<"\n";
             else fout<<R<<"\n";
-            if(G<0) fout<<"0\n";
-            else if(G>max_pixel_value) fout<<max_pixel_value<<"\n";
+            if(G < 0) fout<<"0\n";
+            else if(G > max_pixel_value) fout<<max_pixel_value<<"\n";
             else fout<<G<<"\n";
-            if(B<0) fout<<"0\n";
-            else if(B>max_pixel_value) fout<<max_pixel_value<<"\n";
+            if(B < 0) fout<<"0\n";
+            else if(B > max_pixel_value) fout<<max_pixel_value<<"\n";
             else fout<<B<<"\n";
         }
     }
