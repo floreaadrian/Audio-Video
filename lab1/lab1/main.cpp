@@ -46,6 +46,123 @@ struct block_of_4 {
     int position_y;
 };
 
+
+/////LAB 3 FROM HERE
+struct zig_zag_struct {
+    int j;
+    int i;
+};
+
+zig_zag_struct zigzag[64] = {{1, 0}, {0, 1}, {0, 2}, {1, 1}, {2, 0}, {3, 0}, {2, 1}, {1, 2}, {0, 3}, {0, 4}, {1, 3}, {2, 2},
+    {3, 1}, {4, 0}, {5, 0}, {4, 1}, {3, 2}, {2, 3}, {1, 4}, {0, 5}, {0, 6}, {1, 5}, {2, 4}, {3, 3}, {4, 2},
+    {5, 1}, {6, 0}, {7, 0}, {6, 1}, {5, 2}, {4, 3}, {3, 4}, {2, 5}, {1, 6}, {0, 7}, {1, 7}, {2, 6}, {3, 5},
+    {4, 4}, {5, 3}, {6, 2}, {7, 1}, {7, 2}, {6, 3}, {5, 4}, {4, 5}, {3, 6}, {2, 7}, {3, 7}, {4, 6}, {5, 5},
+    {6, 4}, {7, 3}, {7, 4}, {6, 5}, {5, 6}, {4, 7}, {5, 7}, {6, 6}, {7, 5}, {7, 6}, {6, 7}, {7, 7}};
+
+int bit_length(int x) {
+    return floor(log2(x)) + 1;
+}
+
+void initWithZero(block_of_8 &block) {
+    for(int i=0;i<8;++i){
+        for(int j=0;j<8;++j)
+            block.data[i][j] = 0;
+    }
+}
+
+vector<int> entropyEncodeOfBlock(block_of_8 block_matrix) {
+    vector<int> result;
+    int size = bit_length(block_matrix.data[0][0]);
+    result.push_back(size);
+    result.push_back(block_matrix.data[0][0]);
+    int zeros=0;
+    for(auto it: zigzag){
+        int i = it.i;
+        int j = it.j;
+        if(int(block_matrix.data[i][j] != 0)){
+            size=bit_length(block_matrix.data[i][j]);
+            result.push_back(zeros);
+            result.push_back(size);
+            result.push_back(block_matrix.data[i][j]);
+            zeros=0;
+        }
+        else {
+            zeros+=1;
+        }
+    }
+    if(int(block_matrix.data[7][7] == 0)){
+        result.push_back(0);
+        result.push_back(0);
+    }
+    return result;
+}
+
+void entropyEncode(vector<int> &result,
+                    vector<block_of_8> &quant_y,
+                    vector<block_of_8> &quant_cb,
+                    vector<block_of_8> &quant_cr){
+    result.push_back(width);
+    result.push_back(height);
+    int sizeOfQuant = quant_y.size();
+    for(int i=0;i<sizeOfQuant;++i){
+        vector<int> eachResult;
+        eachResult = entropyEncodeOfBlock(quant_y[i]);
+        result.insert(result.end(), eachResult.begin(), eachResult.end());
+        eachResult = entropyEncodeOfBlock(quant_cb[i]);
+        result.insert(result.end(), eachResult.begin(), eachResult.end());
+        eachResult = entropyEncodeOfBlock(quant_cr[i]);
+        result.insert(result.end(), eachResult.begin(), eachResult.end());
+    }
+    cout<<"ENTROPY ENCODE DONE\n";
+}
+
+void entropyDecode(vector<int> &blocks,
+                    vector<block_of_8> &quant_y_list,
+                    vector<block_of_8> &quant_cb_list,
+                    vector<block_of_8> &quant_cr_list) {
+    int cnt=2;
+    int rep = 0;
+    for(int i=0; i<height/8; ++i) {
+        for(int j=0; j<width/8; ++j) {
+            for(int k=0;k<3;++k) {
+                block_of_8 newBlock;
+                newBlock.position_x = i*8;
+                newBlock.position_y = j*8;
+                newBlock.block_type = "entorpy";
+                initWithZero(newBlock);
+                newBlock.data[0][0]=blocks[cnt+1];
+                cnt+=2;
+                int zigzag_index=0;
+                for(int extra=0; extra<63; ++extra){
+                    int runlength=blocks[cnt];
+                    int sizeofblock=blocks[cnt+1];
+                    if(runlength==0 && sizeofblock==0){
+                        cnt+=2;
+                        break;
+                    }
+                    int amplitude=blocks[cnt+2];
+                    if(amplitude == 0){
+                        throw exception();
+                    }
+                    zigzag_index+=runlength;
+                    newBlock.data[zigzag[zigzag_index].i][zigzag[zigzag_index].j]=amplitude;
+                    cnt+=3;
+                    zigzag_index+=1;
+                }
+                if(k==0) {
+                    quant_y_list.push_back(newBlock);
+                } else if(k==1) {
+                    quant_cb_list.push_back(newBlock);
+                } else if(k==2) {
+                    quant_cr_list.push_back(newBlock);
+                }
+            }
+        }
+    }
+    cout<<"ENTROPY DECODE DONE\n";
+}
+
+
 ///lab 2
 static void from_4_to_8_blocks(vector<block_of_4> &color_4_block_matrix, vector<block_of_8> &result_matrix){
     for(auto matrix_of_4: color_4_block_matrix){
@@ -181,6 +298,7 @@ void DCTandQuantize(vector<block_of_8> &list_y,
         quant_cr_list.push_back(quantize(cr_matrix));
     for(auto y_matrix: dct_y_list)
         quant_y_list.push_back(quantize(y_matrix));
+    cout<<"DCT and Quantizie DONE\n";
 }
 
 ///modified for 8x8 blocks instead of 4x4
@@ -239,6 +357,7 @@ void decode(vector<block_of_8> &y_8_block_matrix,
             else fout<<B<<"\n";
         }
     }
+    cout<<"DECODING DONE\n";
 }
 
 
@@ -272,6 +391,7 @@ void YUVfromDCT(vector<block_of_8> &quant_y,
         cr_list[i] = add128(cr_list[i]);
     for(int i=0;i<y_list.size();i++)
         y_list[i] = add128(y_list[i]);
+    cout<<"YUV from DCT DONE\n";
     decode(y_list,cb_list, cr_list);
 }
 
@@ -343,6 +463,7 @@ static void encode(
             split_4_blocks(i, j, cr_4_block_matrix, cr_matrix);
         }
     }
+    cout<<"ENCODING DONE\n";
 }
 
 static void readSpecifications() {
@@ -363,6 +484,13 @@ int main(int argc, const char * argv[]) {
     vector<block_of_8> dct_quan_cr_8_block_matrix;
     DCTandQuantize(y_8_block_matrix, cb_4_block_matrix, cr_4_block_matrix,
                    dct_quan_y_8_block_matrix, dct_quan_cb_8_block_matrix, dct_quan_cr_8_block_matrix);
+    vector<int> entropy_encoded;
+    entropyEncode(entropy_encoded,dct_quan_y_8_block_matrix, dct_quan_cb_8_block_matrix, dct_quan_cr_8_block_matrix);
+    dct_quan_y_8_block_matrix.clear();
+    dct_quan_cb_8_block_matrix.clear();
+    dct_quan_cr_8_block_matrix.clear();
+    entropyDecode(entropy_encoded,dct_quan_y_8_block_matrix, dct_quan_cb_8_block_matrix, dct_quan_cr_8_block_matrix);
     YUVfromDCT(dct_quan_y_8_block_matrix, dct_quan_cb_8_block_matrix, dct_quan_cr_8_block_matrix);
+    cout<<"FINISH\n";
     return 0;
 }
